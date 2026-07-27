@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' data:; style-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="application-name" content="勤務表作成" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="勤務表" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>勤務表作成</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace" aria-labelledby="app-title">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">PDF to Excel</p>
+            <h1 id="app-title">勤務表作成</h1>
+          </div>
+          <div class="privacy-pill">端末とローカルPC内で処理</div>
+        </header>
+
+        <form id="kintai-form" class="form-grid">
+          <section class="panel primary-panel" aria-labelledby="source-title">
+            <div class="section-head">
+              <h2 id="source-title">出力条件</h2>
+              <span id="save-state" class="save-state">設定を保存済み</span>
+            </div>
+
+            <label class="field">
+              <span>年月</span>
+              <select id="target-month" name="targetMonth" required></select>
+            </label>
+
+            <label class="file-field" for="pdf-file">
+              <span class="file-label">PDF</span>
+              <input id="pdf-file" name="pdfFile" type="file" accept="application/pdf,.pdf" required />
+              <span id="pdf-file-name" class="file-name">ファイルを選択</span>
+            </label>
+
+            <label class="field">
+              <span>所属会社</span>
+              <input id="company" name="company" type="text" autocomplete="organization" list="company-history" />
+              <datalist id="company-history"></datalist>
+            </label>
+
+            <label class="field">
+              <span>プロジェクト名</span>
+              <input id="project" name="project" type="text" autocomplete="off" list="project-history" />
+              <datalist id="project-history"></datalist>
+            </label>
+
+            <label class="field">
+              <span>勤務形態</span>
+              <select id="work-style" name="workStyle">
+                <option value="通常勤務">通常勤務</option>
+                <option value="シフト勤務">シフト勤務</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="panel" aria-labelledby="schedule-title">
+            <div class="section-head">
+              <h2 id="schedule-title">予定時刻</h2>
+              <button class="icon-button" type="button" id="reset-schedule" aria-label="予定時刻を初期値へ戻す" title="予定時刻を初期値へ戻す">
+                <span aria-hidden="true">↺</span>
+              </button>
+            </div>
+
+            <div class="time-grid">
+              <label class="field">
+                <span>勤務開始</span>
+                <input id="planned-start" name="plannedStart" type="time" step="60" />
+              </label>
+              <label class="field">
+                <span>勤務終了</span>
+                <input id="planned-end" name="plannedEnd" type="time" step="60" />
+              </label>
+              <label class="field">
+                <span>休憩①開始</span>
+                <input id="break1-start" name="break1Start" type="time" step="60" />
+              </label>
+              <label class="field">
+                <span>休憩①終了</span>
+                <input id="break1-end" name="break1End" type="time" step="60" />
+              </label>
+              <label class="field">
+                <span>休憩②開始</span>
+                <input id="break2-start" name="break2Start" type="time" step="60" />
+              </label>
+              <label class="field">
+                <span>休憩②終了</span>
+                <input id="break2-end" name="break2End" type="time" step="60" />
+              </label>
+            </div>
+          </section>
+
+          <section class="action-row" aria-live="polite">
+            <button id="submit-button" class="submit-button" type="submit">
+              <span class="button-icon" aria-hidden="true">↓</span>
+              勤務表を出力
+            </button>
+            <p id="status" class="status">PDFを選択して出力できます。</p>
+          </section>
+        </form>
+      </section>
+    </main>
+
+    <script src="/app.js?v=pwa2" type="module"></script>
+  </body>
+</html>
