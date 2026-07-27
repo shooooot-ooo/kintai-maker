@@ -1,19 +1,21 @@
-const CACHE_NAME = "kintai-maker-v5";
-const ASSETS = [
-  "/",
-  "/index.html",
-  "/styles.css",
-  "/app.js?v=pwa2",
-  "/offline-generator.js?v=pwa1",
-  "/manifest.json",
-  "/template.json",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/maskable-512.png",
-  "/icons/apple-touch-icon.png",
-  "/vendor/pdfjs/pdf.min.mjs",
-  "/vendor/pdfjs/pdf.worker.min.mjs",
+const CACHE_NAME = "kintai-maker-v6";
+const ASSET_PATHS = [
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./app.js?v=pwa3",
+  "./offline-generator.js?v=pwa2",
+  "./manifest.json",
+  "./template.json",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/maskable-512.png",
+  "./icons/apple-touch-icon.png",
+  "./vendor/pdfjs/pdf.min.mjs",
+  "./vendor/pdfjs/pdf.worker.min.mjs",
 ];
+const ASSETS = ASSET_PATHS.map((path) => new URL(path, self.registration.scope).toString());
+const INDEX_URL = new URL("./index.html", self.registration.scope).toString();
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -36,14 +38,16 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (event.request.mode === "navigate") {
-    event.respondWith(fetch(event.request).catch(() => caches.match("/index.html")));
+    event.respondWith(fetch(event.request).catch(() => caches.match(INDEX_URL)));
     return;
   }
 
   event.respondWith(
-    caches
-      .match(event.request)
-      .then((cached) => cached || caches.match(url.pathname))
-      .then((cached) => cached || fetch(event.request)),
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      const withoutSearch = new URL(event.request.url);
+      withoutSearch.search = "";
+      return caches.match(withoutSearch.toString()).then((fallback) => fallback || fetch(event.request));
+    }),
   );
 });

@@ -86,8 +86,8 @@ let pdfjsPromise = null;
 
 async function getPdfjs() {
   if (!pdfjsPromise) {
-    pdfjsPromise = import("/vendor/pdfjs/pdf.min.mjs").then((module) => {
-      module.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.mjs";
+    pdfjsPromise = import(new URL("./vendor/pdfjs/pdf.min.mjs", import.meta.url).href).then((module) => {
+      module.GlobalWorkerOptions.workerSrc = new URL("./vendor/pdfjs/pdf.worker.min.mjs", import.meta.url).href;
       return module;
     });
   }
@@ -472,7 +472,7 @@ function removeCalcChainReferences(files) {
 }
 
 async function loadTemplateFiles() {
-  const response = await fetch("/template.json");
+  const response = await fetch(new URL("./template.json", import.meta.url).href);
   if (!response.ok) throw new Error("Excelテンプレートを読み込めませんでした。");
   const template = await response.json();
   return new Map(template.entries.map((entry) => [entry.name, base64ToBytes(entry.data)]));

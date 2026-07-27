@@ -1,4 +1,4 @@
-import { generateWorkbookInBrowser } from "/offline-generator.js?v=pwa1";
+import { generateWorkbookInBrowser } from "./offline-generator.js?v=pwa2";
 
 const STORAGE_KEY = "kintai-maker-settings-v1";
 const HISTORY_KEY = "kintai-maker-history-v1";
@@ -210,5 +210,5 @@ resetSchedule.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
