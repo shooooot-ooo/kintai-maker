@@ -14,10 +14,10 @@
     <meta name="apple-mobile-web-app-title" content="勤務表" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>勤務表作成</title>
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="shell">
@@ -37,15 +37,14 @@
               <span id="save-state" class="save-state">設定を保存済み</span>
             </div>
 
-            <label class="field">
-              <span>年月</span>
-              <select id="target-month" name="targetMonth" required></select>
-            </label>
-
             <label class="file-field" for="pdf-file">
               <span class="file-label">PDF</span>
               <input id="pdf-file" name="pdfFile" type="file" accept="application/pdf,.pdf" required />
-              <span id="pdf-file-name" class="file-name">ファイルを選択</span>
+              <span class="file-picker-row">
+                <span class="file-action">ファイルを選択</span>
+                <span id="pdf-file-name" class="file-name">未選択</span>
+              </span>
+              <span id="pdf-month" class="file-meta" aria-live="polite">年月: 未選択</span>
             </label>
 
             <label class="field">
@@ -116,6 +115,6 @@
       </section>
     </main>
 
-    <script src="/app.js?v=pwa2" type="module"></script>
+    <script src="./app.js?v=pwa6" type="module"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-import { generateWorkbookInBrowser } from "/offline-generator.js?v=pwa1";
+import { generateWorkbookInBrowser, readPdfMonth } from "./offline-generator.js?v=pwa4";
 
 const STORAGE_KEY = "kintai-maker-settings-v1";
 const HISTORY_KEY = "kintai-maker-history-v1";
@@ -17,9 +17,9 @@ const defaults = {
 };
 
 const form = document.querySelector("#kintai-form");
-const monthSelect = document.querySelector("#target-month");
 const pdfInput = document.querySelector("#pdf-file");
 const pdfFileName = document.querySelector("#pdf-file-name");
+const pdfMonth = document.querySelector("#pdf-month");
 const saveState = document.querySelector("#save-state");
 const status = document.querySelector("#status");
 const submitButton = document.querySelector("#submit-button");
@@ -41,41 +41,12 @@ const fields = {
   break2End: document.querySelector("#break2-end"),
 };
 
-function pad2(value) {
-  return String(value).padStart(2, "0");
-}
-
-function monthValue(date) {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
-}
-
-function defaultTargetMonth() {
-  const date = new Date();
-  date.setDate(date.getDate() - 7);
-  return monthValue(date);
-}
-
-function buildMonthOptions() {
-  const base = new Date();
-  base.setDate(1);
-  monthSelect.replaceChildren();
-
-  for (let offset = 0; offset <= 12; offset += 1) {
-    const date = new Date(base.getFullYear(), base.getMonth() - offset, 1);
-    const value = monthValue(date);
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = `${date.getFullYear()}年${pad2(date.getMonth() + 1)}月`;
-    monthSelect.append(option);
-  }
-}
-
 function loadSettings() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return { ...defaults, targetMonth: defaultTargetMonth(), ...parsed };
+    return { ...defaults, ...parsed };
   } catch {
-    return { ...defaults, targetMonth: defaultTargetMonth() };
+    return { ...defaults };
   }
 }
 
@@ -93,7 +64,6 @@ function loadHistory() {
 
 function collectSettings() {
   return {
-    targetMonth: monthSelect.value,
     company: fields.company.value.trim(),
     project: fields.project.value.trim(),
     workStyle: fields.workStyle.value,
@@ -143,13 +113,45 @@ function setStatus(message, tone = "") {
   }
 }
 
-function applySettings(settings) {
-  monthSelect.value = settings.targetMonth;
-  if (!monthSelect.value) {
-    monthSelect.value = defaultTargetMonth();
+function setPdfMonth(message, tone = "") {
+  if (!pdfMonth) return;
+  pdfMonth.textContent = message;
+  if (tone) {
+    pdfMonth.dataset.tone = tone;
+  } else {
+    delete pdfMonth.dataset.tone;
   }
+}
+
+function formatMonth(value) {
+  const [year, month] = String(value || "").split("-");
+  if (!year || !month) return "";
+  return `${year}年${Number(month)}月`;
+}
+
+function applySettings(settings) {
   for (const [key, input] of Object.entries(fields)) {
     input.value = settings[key] ?? defaults[key] ?? "";
+  }
+}
+
+let pdfMonthRequestId = 0;
+
+async function previewPdfMonth(file) {
+  const requestId = (pdfMonthRequestId += 1);
+  if (!file) {
+    setPdfMonth("年月: 未選択");
+    return;
+  }
+
+  setPdfMonth("年月: 読み取り中");
+  try {
+    const result = await readPdfMonth(file);
+    if (requestId !== pdfMonthRequestId) return;
+    setPdfMonth(`年月: ${formatMonth(result.month) || "読み取り済み"}`, "ok");
+  } catch {
+    if (requestId !== pdfMonthRequestId) return;
+    setPdfMonth("年月: 読み取れません", "error");
   }
 }
 
@@ -178,6 +180,7 @@ async function submitForm(event) {
     link.remove();
     URL.revokeObjectURL(url);
     rememberHistory(collectSettings());
+    if (result.month) setPdfMonth(`年月: ${formatMonth(result.month)}`, "ok");
     setStatus(`${outputName} を作成しました。`, "ok");
   } catch (error) {
     setStatus(error.message || "勤務表の作成に失敗しました。", "error");
@@ -186,7 +189,6 @@ async function submitForm(event) {
   }
 }
 
-buildMonthOptions();
 applySettings(loadSettings());
 renderHistory(loadHistory());
 
@@ -199,7 +201,8 @@ form.addEventListener("submit", submitForm);
 
 pdfInput.addEventListener("change", () => {
   const file = pdfInput.files?.[0];
-  pdfFileName.textContent = file ? file.name : "ファイルを選択";
+  pdfFileName.textContent = file ? file.name : "未選択";
+  previewPdfMonth(file);
 });
 
 resetSchedule.addEventListener("click", () => {
@@ -210,5 +213,5 @@ resetSchedule.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }

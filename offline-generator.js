@@ -86,8 +86,8 @@ let pdfjsPromise = null;
 
 async function getPdfjs() {
   if (!pdfjsPromise) {
-    pdfjsPromise = import("/vendor/pdfjs/pdf.min.mjs").then((module) => {
-      module.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.mjs";
+    pdfjsPromise = import(new URL("./vendor/pdfjs/pdf.min.mjs", import.meta.url).href).then((module) => {
+      module.GlobalWorkerOptions.workerSrc = new URL("./vendor/pdfjs/pdf.worker.min.mjs", import.meta.url).href;
       return module;
     });
   }
@@ -472,15 +472,18 @@ function removeCalcChainReferences(files) {
 }
 
 async function loadTemplateFiles() {
-  const response = await fetch("/template.json");
+  const response = await fetch(new URL("./template.json", import.meta.url).href);
   if (!response.ok) throw new Error("Excelテンプレートを読み込めませんでした。");
   const template = await response.json();
   return new Map(template.entries.map((entry) => [entry.name, base64ToBytes(entry.data)]));
 }
 
-function textInRange(items, [minX, maxX]) {
-  return items
-    .filter((item) => item.x >= minX && item.x < maxX)
+function itemsInRange(items, [minX, maxX]) {
+  return items.filter((item) => item.x >= minX && item.x < maxX);
+}
+
+function textInRange(items, range) {
+  return itemsInRange(items, range)
     .sort((a, b) => a.x - b.x)
     .map((item) => item.str)
     .join("")
@@ -488,7 +491,24 @@ function textInRange(items, [minX, maxX]) {
 }
 
 function timeInRange(items, range) {
+  const topmost = itemsInRange(items, range)
+    .map((item) => ({ ...item, time: firstTime(item.str) }))
+    .filter((item) => item.time)
+    .sort((a, b) => b.y - a.y || a.x - b.x)[0];
+  if (topmost) return topmost.time;
   return firstTime(textInRange(items, range));
+}
+
+function itemsInDayBand(items, anchors, anchor, index) {
+  const previous = anchors[index - 1];
+  const next = anchors[index + 1];
+  const previousGap = previous ? Math.abs(previous.y - anchor.y) : 0;
+  const nextGap = next ? Math.abs(anchor.y - next.y) : 0;
+  const fallbackGap = previousGap || nextGap || 16;
+  const upperY = previous ? (previous.y + anchor.y) / 2 : anchor.y + fallbackGap / 2;
+  const lowerY = next ? (anchor.y + next.y) / 2 : anchor.y - fallbackGap / 2;
+
+  return items.filter((item) => item.y <= upperY && item.y > lowerY);
 }
 
 function normalizeNote(value) {
@@ -542,6 +562,7 @@ async function extractPdf(file) {
     .sort((a, b) => b.y - a.y);
   const records = anchors.map((anchor, index) => {
     const sameLine = items.filter((item) => Math.abs(item.y - anchor.y) <= 2);
+    const dayBand = itemsInDayBand(items, anchors, anchor, index);
     const nextY = anchors[index + 1]?.y ?? -9999;
     const noteItems = items
       .filter((item) => item.x >= 685 && item.y <= anchor.y + 3 && item.y > nextY + 2)
@@ -550,22 +571,27 @@ async function extractPdf(file) {
     return {
       day: Number(anchor.str),
       workType: textInRange(sameLine, DAILY_COLUMNS.workType),
-      start: timeInRange(sameLine, DAILY_COLUMNS.start),
-      end: timeInRange(sameLine, DAILY_COLUMNS.end),
-      breakTime: timeInRange(sameLine, DAILY_COLUMNS.breakTime),
-      actual: timeInRange(sameLine, DAILY_COLUMNS.actual),
-      overtime: timeInRange(sameLine, DAILY_COLUMNS.overtime),
-      night: timeInRange(sameLine, DAILY_COLUMNS.night),
-      late: timeInRange(sameLine, DAILY_COLUMNS.late),
-      early: timeInRange(sameLine, DAILY_COLUMNS.early),
-      scheduledHoliday: timeInRange(sameLine, DAILY_COLUMNS.scheduledHoliday),
-      legalHoliday: timeInRange(sameLine, DAILY_COLUMNS.legalHoliday),
+      start: timeInRange(dayBand, DAILY_COLUMNS.start),
+      end: timeInRange(dayBand, DAILY_COLUMNS.end),
+      breakTime: timeInRange(dayBand, DAILY_COLUMNS.breakTime),
+      actual: timeInRange(dayBand, DAILY_COLUMNS.actual),
+      overtime: timeInRange(dayBand, DAILY_COLUMNS.overtime),
+      night: timeInRange(dayBand, DAILY_COLUMNS.night),
+      late: timeInRange(dayBand, DAILY_COLUMNS.late),
+      early: timeInRange(dayBand, DAILY_COLUMNS.early),
+      scheduledHoliday: timeInRange(dayBand, DAILY_COLUMNS.scheduledHoliday),
+      legalHoliday: timeInRange(dayBand, DAILY_COLUMNS.legalHoliday),
       note: normalizeNote(noteItems.map((item) => item.str).join("")),
     };
   });
 
   if (!records.length) throw new Error("PDFから日別の勤怠行を読み取れませんでした。");
   return { month, employeeName, days: records };
+}
+
+export async function readPdfMonth(pdfFile) {
+  const pdfData = await extractPdf(pdfFile);
+  return { month: pdfData.month };
 }
 
 function crc32(bytes) {
@@ -681,11 +707,8 @@ function zipStore(files) {
 
 export async function generateWorkbookInBrowser(settings, pdfFile) {
   const [files, pdfData] = await Promise.all([loadTemplateFiles(), extractPdf(pdfFile)]);
-  if (pdfData.month !== settings.targetMonth) {
-    throw new Error("選択した年月とPDFの年月が違います。年月を確認してください。");
-  }
 
-  const [year, month] = settings.targetMonth.split("-").map(Number);
+  const [year, month] = pdfData.month.split("-").map(Number);
   const mainSheetPath = resolveSheetPath(files, "勤務表");
   const holidaySheetPath = resolveSheetPath(files, "祝日リスト");
   const mainSheetDoc = parseXml(bytesToXml(files.get(mainSheetPath)));
@@ -723,6 +746,7 @@ export async function generateWorkbookInBrowser(settings, pdfFile) {
   const workbook = zipStore(files);
   return {
     filename: `勤務表_${safeFilenamePart(pdfData.employeeName)}_${year}${pad2(month)}.xlsx`,
+    month: pdfData.month,
     blob: new Blob([workbook], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }),

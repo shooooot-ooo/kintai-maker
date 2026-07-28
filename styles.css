@@ -153,6 +153,7 @@ button:focus-visible {
 }
 
 .file-field {
+  position: relative;
   border: 1px dashed #9fb0c2;
   border-radius: 8px;
   background: var(--surface-muted);
@@ -160,17 +161,58 @@ button:focus-visible {
   cursor: pointer;
 }
 
-.file-field input {
-  min-height: auto;
-  border: 0;
-  padding: 0;
-  background: transparent;
+.file-field:focus-within {
+  outline: 3px solid rgba(37, 99, 235, 0.25);
+  outline-offset: 2px;
+  border-color: var(--blue);
+}
+
+.file-field input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.file-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.file-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 7px 11px;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .file-name {
   color: var(--muted);
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.file-meta {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.file-meta[data-tone="ok"] {
+  color: var(--accent-dark);
+}
+
+.file-meta[data-tone="error"] {
+  color: var(--danger);
 }
 
 .time-grid {
